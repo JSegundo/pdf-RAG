@@ -32,3 +32,89 @@ https://www.npmjs.com/package/pdf-lib
 │   └── config/
 │
 └── shared/                      # Shared configurations/types
+
+
+
+# Key Design Decisions:
+
+## Asynchronous Processing: 
+    Long-running tasks (PDF processing, embedding generation) happen asynchronously through message queues.
+    Stateless Services:
+        Both Node.js and Python services are stateless, making them easy to scale.
+    
+    Shared Resources:
+        Vector DB accessible by both services
+        File storage (S3/similar) for document storage
+        Message queue for communication
+        Redis for caching frequent queries
+
+
+## Responsibility Split:
+    Node.js handles:
+        API endpoints, auth, file uploads, chat orchestration
+    Python handles: 
+        Document processing, chunking, embedding generation
+
+
+
+
+# Key Components Explained:
+# Key Components Explained:
+# Key Components Explained:
+# Key Components Explained:
+
+## Chat Flow (buildContext expanded):
+
+User sends message via WebSocket
+Chat Manager:
+    Retrieves conversation history
+    Gets relevant chunks from Vector Search
+    Context Builder combines:
+        Most relevant document chunks
+        Recent conversation history
+        System prompts/instructions
+
+Optional: Reranker fine-tunes relevance
+Formats final prompt for LLM
+Streams response back via WebSocket
+
+
+Document Processing Flow:
+    Upload → File Storage
+    Queue job for processing
+    Python service:
+        Extracts text
+        Splits into optimal chunks
+        Generates embeddings
+        Stores in Vector DB with metadata
+
+
+
+
+
+
+
+
+
+
+
+### nice to 
+
+Performance Optimizations:
+    Cache frequent vector searches
+    Batch embedding generations
+    Stream responses for better UX
+    Reuse WebSocket connections
+
+Scalability Points:
+    Separate queues for different processing types
+    Independent scaling of Node.js and Python services
+    Cache sharing between services
+    Stateless design for horizontal scaling
+
+This architecture allows for:
+    Real-time chat with streamed responses
+    Asynchronous document processing
+    Efficient context retrieval and reranking
+    Scalable processing of large documents
+    Easy addition of new document types or LLM providers

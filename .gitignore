@@ -2,6 +2,10 @@
 node_modules/
 .pnp/
 .pnp.js
+__pycache__/
+*.py[cod]
+venv/
+.env
 
 # Build outputs
 dist/
@@ -20,6 +24,7 @@ out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # IDE and editor files
 .idea/
@@ -30,11 +35,18 @@ yarn-error.log*
 
 # Testing
 coverage/
+.pytest_cache/
 
 # Temporary files
-*.log
 .tmp/
 .temp/
 
 # TypeScript
 *.tsbuildinfo
+
+# Python specific
+*.egg-info/
+.eggs/
+*.egg
+
+uploads/
