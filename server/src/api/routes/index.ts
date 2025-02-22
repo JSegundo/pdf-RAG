@@ -1,6 +1,6 @@
 import { Express } from 'express';
-import { setupPdfRoutes } from './pdfRoutes';
+import { setupDocumentRoutes } from './documentRoutes';
 
 export const setupRoutes = (app: Express) => {
-  setupPdfRoutes(app);
+  setupDocumentRoutes(app);
 }; 
