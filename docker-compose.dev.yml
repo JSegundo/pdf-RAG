@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -37,13 +35,24 @@ services:
     build: 
       context: ./processing-service
       dockerfile: Dockerfile
+      cache_from:
+        - processing-service:optimized  # Use our tagged version
+    image: processing-service:optimized  # Save as optimized/cached version
     environment:
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - UPLOADS_DIR=/app/uploads
       - PYTHONUNBUFFERED=1
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
     volumes:
       - ./processing-service:/app
       - uploads:/app/uploads
+      # Add a volume for pip cache
+      - pip-cache:/root/.cache/pip
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -56,4 +65,5 @@ services:
 
 volumes:
   rabbitmq_data:
-  uploads: 
+  uploads:
+  pip-cache: # New volume for pip cache
