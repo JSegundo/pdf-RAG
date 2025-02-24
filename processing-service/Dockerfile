@@ -14,16 +14,14 @@ RUN apt-get update && \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Upgrade pip and install build tools
+# # Upgrade pip and install build tools
 RUN pip install pip setuptools wheel --upgrade
 
-# Install lighter dependencies first
-RUN pip install pika==1.3.1 python-dotenv==1.0.0
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Install only required docling features
-RUN pip install "docling[convert,chunk]==2.24.0" && \
-    # Clean up to reduce image size
-    find /opt/venv -name "*.pyc" -delete && \
+# Cleanup after installing from requirements
+RUN find /opt/venv -name "*.pyc" -delete && \
     find /opt/venv -name "__pycache__" -delete && \
     rm -rf /root/.cache/pip
 
