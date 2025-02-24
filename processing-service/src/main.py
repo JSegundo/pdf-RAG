@@ -1,4 +1,4 @@
-from consumer import QueueConsumer
+from queue_consumer import QueueConsumer
 import time
 import sys
 
