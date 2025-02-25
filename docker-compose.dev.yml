@@ -13,6 +13,36 @@ services:
       retries: 5
       start_period: 10s
 
+  postgres:
+    image: ankane/pgvector
+    ports:
+      - "5438:5432"
+    environment:
+      - POSTGRES_PASSWORD=yourpassword
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=ragdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: adminpassword
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
   server:
     build: 
       context: ./server
@@ -42,6 +72,8 @@ services:
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - UPLOADS_DIR=/app/uploads
       - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgres://postgres:yourpassword@postgres:5432/ragdb  # Add this
+
     deploy:
       resources:
         limits:
@@ -67,3 +99,5 @@ volumes:
   rabbitmq_data:
   uploads:
   pip-cache: # New volume for pip cache
+  postgres_data:
+  pgadmin_data:
