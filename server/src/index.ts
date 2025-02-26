@@ -7,8 +7,12 @@ import { queueService } from './services/queue';
 import fs from 'fs';
 import cors from 'cors';
 import path from 'path';
+import { setupWebSocketServer } from './services/websocket/server';
+import http from 'http';
 
 const app = express();
+const httpServer = http.createServer(app);
+const statusServer = setupWebSocketServer(httpServer);
 
 // Ensure uploads directory exists with proper permissions
 const uploadsDir = path.resolve(UPLOAD_CONFIG.tempDir);
@@ -24,7 +28,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Setup routes
-setupRoutes(app);
+setupRoutes(app, statusServer);
 
 // Error handling
 app.use(errorHandler);
@@ -35,7 +39,7 @@ async function startServer() {
     await queueService.initialize();
     console.log('Queue service initialized successfully');
     
-    app.listen(config.port, () => {
+    httpServer.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);
     });
   } catch (error) {
