@@ -3,7 +3,7 @@ import pika  # RabbitMQ client library for Python
 import json 
 import os    # For accessing environment variables
 from dotenv import load_dotenv  
-from pipeline.processor import DocumentProcessor
+from process_pipeline.processor import DocumentProcessor
 
 load_dotenv()
 
@@ -18,10 +18,11 @@ class QueueConsumer:
         
         # Database configuration
         self.db_config = {
-            'dbname': os.getenv('POSTGRES_DB'),
-            'user': os.getenv('POSTGRES_USER'),
-            'password': os.getenv('POSTGRES_PASSWORD'),
-            'host': os.getenv('POSTGRES_HOST', 'localhost')
+            'dbname': os.getenv('POSTGRES_DB', 'postgres'),
+            'user': os.getenv('POSTGRES_USER', 'postgres'),
+            'password': os.getenv('POSTGRES_PASSWORD', 'yourpassword'),
+            'host': os.getenv('POSTGRES_HOST', 'postgres'),
+            'port': os.getenv('POSTGRES_PORT', '5432')
         }
         
         # Initialize document processor
@@ -103,7 +104,7 @@ class QueueConsumer:
             print(f"  - Title: {result['document_info']['title']}")
             print(f"  - Chunks: {result['document_info']['num_chunks']}")
             
-            # TODO: You might want to store the job result in a database
+            # TODO: store the job result in a database
             # or send a notification back to your Node.js server
             
             ch.basic_ack(delivery_tag=method.delivery_tag)

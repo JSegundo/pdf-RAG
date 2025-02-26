@@ -3,6 +3,12 @@ pika==1.3.1           # RabbitMQ client
 python-dotenv==1.0.0  # For environment variables
 docling[convert,chunk]==2.24.0
 
+uuid
+psycopg2-binary
+pgvector
+openai
+numpy
+tiktoken
 # Remove these for now as we're not using them yet
 # fastapi==0.68.1
 # uvicorn==0.15.0
