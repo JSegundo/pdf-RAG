@@ -66,7 +66,7 @@ class QueueConsumer:
             file_path = data.get('filePath')
             retries = data.get('retries', 0)
             metadata = data.get('metadata', {})  # Additional metadata from message
-            
+
             print(f"- Job ID: {job_id}")
             print(f"- Original File Path: {file_path}")
             print(f"- Retry Attempt: {retries}")
@@ -96,6 +96,7 @@ class QueueConsumer:
             
             # Process document through pipeline
             result = self.processor.process_document(
+                file_id=job_id,
                 file_path=full_path,
                 metadata=metadata
             )

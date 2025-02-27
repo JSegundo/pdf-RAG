@@ -1,7 +1,9 @@
 from typing import Dict
+import time
 from process_pipeline.extract import TextExtractor
 from process_pipeline.chunk import TextChunker
 from process_pipeline.embed import TextEmbedder  # We'll create this next
+from notifier.notifier import StatusNotifier  # We'll create this next
 
 class DocumentProcessor:
     def __init__(self, db_config: Dict):
@@ -12,10 +14,11 @@ class DocumentProcessor:
         self.extractor = TextExtractor()
         self.chunker = TextChunker()
         self.embedder = TextEmbedder(db_config)
+        self.notifier = StatusNotifier()
         print("✓ Initialized all pipeline components")
         print("=== Initialization Complete ===\n")
 
-    def process_document(self, file_path: str, metadata: Dict = None) -> Dict:
+    def process_document(self,file_id:str, file_path: str, metadata: Dict = None) -> Dict:
         """
         Run the complete document processing pipeline:
         1. Extract text and structure using docling
@@ -33,19 +36,28 @@ class DocumentProcessor:
             print("\n=== Starting Document Processing Pipeline ===")
             print(f"Processing file: {file_path}")
             
+               # Notify processing started
+            self.notifier.send_notification(file_id, "processing", {
+                "stage": "started",
+                "timestamp": time.time()
+            })
+
             # Step 1: Extract text using docling
+            # Notify processing started
+            self.notifier.send_notification(file_id, "processing", {"stage": "extracting"})
             print("Step 1: Extracting text...")
-            extracted_data = self.extractor.extract(file_path)
+            extracted_data = self.extractor.extract(file_path) # docling
             document = extracted_data['document']
-            # Get structured data
             json_data = extracted_data['json']
                         
             # Step 2: Chunk the text
+            self.notifier.send_notification(file_id, "processing", {"stage": "chunking"})
             print("\nStep 2: Chunking text...")
             chunks = self.chunker.chunk_text(document)
             print(f"✓ Created {len(chunks)} chunks")
             
             # Step 3: Create and store embeddings
+            self.notifier.send_notification(file_id, "processing", {"stage": "embedding"})
             print("\nStep 3: Creating embeddings...")
             # Combine metadata with document info
             enhanced_metadata = {
@@ -60,6 +72,11 @@ class DocumentProcessor:
             )
             print(f"✓ Created and stored embeddings for {len(processed_chunks)} chunks")
             
+            self.notifier.send_notification(file_id, "completed", {
+                "chunkCount": len(processed_chunks),
+                "ready": True
+            })
+
             print("=== Document Processing Complete ===\n")
             return {
                 'status': 'success',
@@ -73,4 +90,7 @@ class DocumentProcessor:
         except Exception as e:
             print(f"✗ Error in document processing pipeline: {e}")
             print("=== Document Processing Failed ===\n")
+            self.notifier.send_notification(file_id, "failed", {
+                "error": e
+            })
             raise
