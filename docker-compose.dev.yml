@@ -73,11 +73,12 @@ services:
       - UPLOADS_DIR=/app/uploads
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgres://postgres:yourpassword@postgres:5432/ragdb  # Add this
+      - API_SERVER_URL=http://server:3000
 
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 7G
         reservations:
           memory: 2G
     volumes:
@@ -88,6 +89,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      server:
+        condition: service_started
     restart: always
     logging:
       driver: "json-file"

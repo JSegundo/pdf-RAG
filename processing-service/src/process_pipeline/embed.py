@@ -16,7 +16,6 @@ class TextEmbedder:
         """
         # Initialize OpenAI client
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        print(f'openai client {self.client.models.list()}')
         # Initialize PostgreSQL connection
         self.conn = psycopg2.connect(**db_config)
         
