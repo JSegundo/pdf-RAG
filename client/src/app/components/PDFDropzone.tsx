@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone"
 import { FileIcon, UploadIcon } from "lucide-react"
 import React from "react"
 import { validatePDF } from "../utils/pdfUtils"
+import {ProcessingStatus} from './ProcessingStatus';
 
 interface UploadResponse {
   jobId: string;
@@ -12,11 +13,40 @@ interface UploadResponse {
   originalName: string;
 }
 
+enum DocumentPageState {
+  UPLOAD,
+  PROCESSING,
+  CHAT
+}
+
 export default function PDFDropzone() {
+  const [pageState, setPageState] = useState<DocumentPageState>(DocumentPageState.UPLOAD);
+
   const [file, setFile] = useState<File | null>(null)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>("")
   const [isUploading, setIsUploading] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
+
+   const handleUploadSuccess = (newFileId: string) => {
+    setJobId(newFileId);
+    setPageState(DocumentPageState.PROCESSING);
+  };
+
+  const handleProcessingComplete = () => {
+    setPageState(DocumentPageState.CHAT);
+  };
+
+  const handleProcessingFailed = (errorMessage: string) => {
+    setError(errorMessage);
+    setPageState(DocumentPageState.UPLOAD);
+  };
+
+  const resetPage = () => {
+    setJobId(null);
+    setError(null);
+    setPageState(DocumentPageState.UPLOAD);
+  };
+
 
   useEffect(() => {
     console.log("File state updated:", file)
@@ -66,6 +96,7 @@ export default function PDFDropzone() {
 
       const data: UploadResponse = await response.json()
       setJobId(data.jobId)
+      handleUploadSuccess(data.jobId)
       console.log('Upload successful:', data)
 
     } catch (err) {
@@ -143,7 +174,25 @@ export default function PDFDropzone() {
       )}
 
       {error && (
+        <>
         <p className="mt-2 text-sm text-red-600">{error}</p>
+        <button
+            onClick={resetPage}
+            className="mt-4 w-full rounded bg-red-500 px-4 py-2 text-white transition-colors hover:bg-red-600"
+            >
+            {isUploading ? "Uploading..." : "Try Again"}
+          </button>
+          </>
+      )}
+
+       {pageState === DocumentPageState.PROCESSING && jobId && (
+        <div className="processing-section mb-2">
+          <ProcessingStatus 
+            fileId={jobId}
+            onProcessingComplete={handleProcessingComplete}
+            onProcessingFailed={handleProcessingFailed}
+          />
+        </div>
       )}
     </div>
   )
