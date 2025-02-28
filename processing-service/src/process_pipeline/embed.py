@@ -23,34 +23,27 @@ class TextEmbedder:
         self._init_database()
     
     def _init_database(self):
-        """Initialize PostgreSQL database with pgvector extension and tables"""
+        """Check if necessary database structures exist"""
         with self.conn.cursor() as cur:
-            # Enable pgvector extension
-            cur.execute('CREATE EXTENSION IF NOT EXISTS vector')
-            
-            # Create documents table
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS documents (
-                    id SERIAL PRIMARY KEY,
-                    filename TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            # Check if tables exist
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = 'documents'
                 )
-            ''')
+            """)
+            documents_exists = cur.fetchone()[0]
             
-            # Create chunks table with vector support
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS chunks (
-                    id SERIAL PRIMARY KEY,
-                    document_id INTEGER REFERENCES documents(id),
-                    chunk_text TEXT,
-                    embedding vector(1536),
-                    page_numbers INTEGER[],
-                    metadata JSONB,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = 'chunks'
                 )
-            ''')
+            """)
+            chunks_exists = cur.fetchone()[0]
             
-            self.conn.commit()
+            if not documents_exists or not chunks_exists:
+                print("Warning: Required database tables don't exist. They should be created by init.sql.")
 
     def create_embeddings(self, chunks: List, metadata: Dict = None) -> List[Dict]:
         """
