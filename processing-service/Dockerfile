@@ -17,13 +17,13 @@ ENV PATH="/opt/venv/bin:$PATH"
 # # Upgrade pip and install build tools
 RUN pip install pip setuptools wheel --upgrade
 
-# Install base requirements (fast, frequently changing)
-COPY requirements/base.txt requirements/
-RUN pip install -r requirements/base.txt
+# Install heavy dependencies first (rarely changing)
+COPY requirements/heavy.txt /requirements/
+RUN pip install -r /requirements/heavy.txt
 
-# Install heavy requirements (slow, rarely changing)
-COPY requirements/heavy.txt requirements/
-RUN pip install -r requirements/heavy.txt
+# Install base requirements second (frequently changing)
+COPY requirements/base.txt /requirements/
+RUN pip install -r /requirements/base.txt
 
 # Cleanup after installing from requirements
 RUN find /opt/venv -name "*.pyc" -delete && \
