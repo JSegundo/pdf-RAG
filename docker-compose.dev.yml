@@ -68,6 +68,8 @@ services:
       cache_from:
         - processing-service:optimized  # Use our tagged version
     image: processing-service:optimized  # Save as optimized/cached version
+    ports:
+      - "8000:8000"
     environment:
       - RABBITMQ_URL=amqp://rabbitmq:5672
       - UPLOADS_DIR=/app/uploads
@@ -91,7 +93,7 @@ services:
         condition: service_healthy
       server:
         condition: service_started
-    restart: always
+    restart: on-failure
     logging:
       driver: "json-file"
       options:
