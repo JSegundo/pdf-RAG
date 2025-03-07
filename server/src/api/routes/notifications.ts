@@ -8,8 +8,7 @@ export default function createNotificationRouter(statusServer: StatusServerInter
   
   // Endpoint for Python service to send notifications
   router.post('/internal/notify', validateInternalRequest, (req: Request, res: Response) => {
-    const { fileId, status, metadata } = req.body as NotificationRequest;
-    
+    const { fileId, status, metadata } = req.body as NotificationRequest;    
     if (!fileId || !status) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -23,5 +22,5 @@ export default function createNotificationRouter(statusServer: StatusServerInter
 // Setup the notification routes
 export const setupNotificationRoutes = (app: Express, statusServer: StatusServerInterface) => {
   const notificationRouter = createNotificationRouter(statusServer);
-  app.use('/api/notification', notificationRouter);
+  app.use('/api/notifications', notificationRouter);
 };

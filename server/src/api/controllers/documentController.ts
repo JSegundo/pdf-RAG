@@ -39,7 +39,7 @@ export const handleUpload = async (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const jobId = req.file?.filename.split('.')[0];
+    const jobId = req.file?.filename.split('.')[0]; // file id
     const filePath = req.file?.path;
 
     console.log('=== File Upload Handler ===');
