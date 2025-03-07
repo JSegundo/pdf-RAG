@@ -4,16 +4,20 @@ from process_pipeline.extract import TextExtractor
 from process_pipeline.chunk import TextChunker
 from process_pipeline.embed import TextEmbedder  # We'll create this next
 from notifier.notifier import StatusNotifier  # We'll create this next
+from storage.db_manager import DatabaseManager, get_db_manager
 
 class DocumentProcessor:
-    def __init__(self, db_config: Dict):
+    def __init__(self, db_manager:DatabaseManager):
         """
         Initialize the complete document processing pipeline
+         Args:
+            db_manager: Database connection manager
         """
         print("\n=== Initializing Document Processor ===")
+        self.db_manager = db_manager
         self.extractor = TextExtractor()
         self.chunker = TextChunker()
-        self.embedder = TextEmbedder(db_config)
+        self.embedder = TextEmbedder(db_manager)
         self.notifier = StatusNotifier()
         print("✓ Initialized all pipeline components")
         print("=== Initialization Complete ===\n")
