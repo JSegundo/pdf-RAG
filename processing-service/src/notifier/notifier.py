@@ -1,3 +1,4 @@
+import json
 import requests
 import os
 import logging
@@ -25,6 +26,10 @@ class StatusNotifier:
         Returns:
             bool: Whether the notification was sent successfully
         """
+
+        # Safely convert metadata to JSON-serializable format
+        safe_metadata = self._sanitize_metadata(metadata or {})
+
         try:
             logger.info(f"Sending {status} notification for file {file_id}")
             print(f"API URL: {self.api_url}")
@@ -34,7 +39,7 @@ class StatusNotifier:
                 json={
                     "fileId": file_id,
                     "status": status,
-                    "metadata": metadata or {}
+                    "metadata": safe_metadata or {}
                 },
                 headers={
                     "Content-Type": "application/json",
@@ -51,3 +56,41 @@ class StatusNotifier:
         except Exception as e:
             logger.error(f"Exception sending notification: {e}")
             return False
+        
+    def _sanitize_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ensure metadata is JSON-serializable
+        
+        Args:
+            metadata: The metadata to sanitize
+            
+        Returns:
+            Dict with JSON-safe values
+        """
+        safe_metadata = {}
+        
+        for key, value in metadata.items():
+            # Skip None values
+            if value is None:
+                continue
+                
+            # Convert basic types directly
+            if isinstance(value, (str, int, float, bool)):
+                safe_metadata[key] = value
+            # Convert lists and tuples if they contain basic types
+            elif isinstance(value, (list, tuple)):
+                try:
+                    # Test if it's JSON serializable by encoding/decoding
+                    json.dumps(value)
+                    safe_metadata[key] = value
+                except (TypeError, ValueError):
+                    # If not serializable, convert to string
+                    safe_metadata[key] = str(value)
+            # Convert dicts recursively
+            elif isinstance(value, dict):
+                safe_metadata[key] = self._sanitize_metadata(value)
+            # Convert everything else to string
+            else:
+                safe_metadata[key] = str(value)
+                
+        return safe_metadata

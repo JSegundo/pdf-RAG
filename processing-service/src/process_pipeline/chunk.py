@@ -13,23 +13,18 @@ class TextChunker:
         )
 
     def chunk_text(self, document):
-        """
-        Split text into chunks using HybridChunker
+        if not document:
+            raise ValueError("The input document is empty or invalid.")
         
-        Args:
-            text: The input text to be chunked
-            
-        Returns:
-            List of text chunks
-        """
-
         try:
             chunk_iter = self.chunker.chunk(dl_doc=document)
+            chunks = list(chunk_iter)
+            
+            if not chunks:
+                print("Warning: Chunking resulted in an empty list of chunks.")
+                print(f"Input document: {document}")  # Log the input for debugging
+            
+            return chunks
         except Exception as e:
             print(f"Error during chunking: {e}")
-            raise       
-                 
-        chunks = list(chunk_iter)
-        # return [chunk.text for chunk in chunks]
-        return chunks
-
+            raise
