@@ -1,72 +1,54 @@
-from typing import List, Dict
+# processing-service/src/process_pipeline/embed.py
 import os
-import uuid
-from openai import OpenAI
+import json
+import logging
+from typing import List, Dict, Any, Optional
 import psycopg2
 from psycopg2.extras import execute_values
-import numpy as np
-import json
+from openai import OpenAI
+
+from storage.db_manager import DatabaseManager
+
+logger = logging.getLogger(__name__)
+
 class TextEmbedder:
-    def __init__(self, db_config: Dict):
+    """Generates and stores embeddings for text chunks"""
+    
+    def __init__(self, db_manager: DatabaseManager):
         """
-        Initialize the embedder with OpenAI client and PostgreSQL connection
+        Initialize the embedder with OpenAI client and database manager
         
         Args:
-            db_config: Dictionary with PostgreSQL connection details
+            db_manager: Database connection manager
         """
-        # Initialize OpenAI client
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        # Initialize PostgreSQL connection
-        self.conn = psycopg2.connect(**db_config)
+        # Store the database manager
+        self.db_manager = db_manager
         
-        # Create necessary database structures
-        self._init_database()
+        # Initialize OpenAI client
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            logger.warning("OPENAI_API_KEY environment variable not set")
+            
+        self.client = OpenAI(api_key=api_key)
+        logger.info("Text embedder initialized")
     
-    def _init_database(self):
-        """Check if necessary database structures exist"""
-        with self.conn.cursor() as cur:
-            # Check if tables exist
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' AND table_name = 'documents'
-                )
-            """)
-            documents_exists = cur.fetchone()[0]
-            
-            cur.execute("""
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' AND table_name = 'chunks'
-                )
-            """)
-            chunks_exists = cur.fetchone()[0]
-            
-            if not documents_exists or not chunks_exists:
-                print("Warning: Required database tables don't exist. They should be created by init.sql.")
-
     def create_embeddings(self, chunks: List, metadata: Dict = None) -> List[Dict]:
         """
         Create embeddings for text chunks and store them in PostgreSQL with pgvector.
-
+        
         Args:
             chunks: A list of DocChunk objects. Each DocChunk contains text and metadata.
             metadata: Additional metadata for the document (optional).
-
+            
         Returns:
             A list of dictionaries, where each dictionary represents a processed chunk.
         """
         if not chunks:
             raise ValueError("The chunks list is empty.")
-
+        
         # First, create a document record in the database
-        with self.conn.cursor() as cur:
-            cur.execute(
-                'INSERT INTO documents (filename) VALUES (%s) RETURNING id',
-                (metadata.get('filename'),)
-            )
-            document_id = cur.fetchone()[0]  # Get the ID of the newly inserted document
-
+        document_id = self._create_document_record(metadata.get('filename'))
+        
         # Process chunks into a structured format
         processed_chunks = []
         for i, chunk in enumerate(chunks):
@@ -97,80 +79,72 @@ class TextEmbedder:
                 },
             }
             processed_chunks.append(processed_chunk)
-
+        
         # Insert the processed chunks into the database
-        try:
-            with self.conn.cursor() as cur:
-                # Prepare the data for insertion
-                data = [
-                    (
-                        chunk["document_id"],
-                        chunk["chunk_text"],
-                        chunk["embedding"],
-                        chunk["page_numbers"],
-                        json.dumps(chunk["metadata"])
-                    )
-                    for chunk in processed_chunks
-                ]
-
-                # Use execute_values for efficient bulk insertion
-                execute_values(
-                    cur,
-                    '''
-                    INSERT INTO chunks 
-                    (document_id, chunk_text, embedding, page_numbers, metadata)
-                    VALUES %s
-                    ''',
-                    data
-                )
-
-            # Commit the transaction
-            self.conn.commit()
-        except Exception as e:
-            # Rollback the transaction in case of an error
-            self.conn.rollback()
-            print(f"Error adding chunks to database: {e}")
-            raise
-
+        self._store_chunks(processed_chunks)
+        
         return processed_chunks
-
-    def search_similar(self, query: str, limit: int = 5) -> List[Dict]:
+    
+    def _create_document_record(self, filename: str) -> int:
         """
-        Search for similar chunks using vector similarity
+        Create a new document record in the database
         
         Args:
-            query: Text to search for
-            limit: Maximum number of results to return
+            filename: The filename of the document
             
         Returns:
-            List of similar chunks with their metadata
+            The ID of the newly created document
         """
-        # Get embedding for query
-        response = self.client.embeddings.create(
-            model="text-embedding-3-large",
-            input=[query]
-        )
-        query_embedding = response.data[0].embedding
+        sql = 'INSERT INTO documents (filename) VALUES (%s) RETURNING id'
+        result = self.db_manager.execute_query(sql, (filename,), fetch_one=True)
+        return result
+    
+    def _store_chunks(self, processed_chunks: List[Dict]) -> None:
+        """
+        Store processed chunks in the database
         
-        # Search using cosine similarity
-        with self.conn.cursor() as cur:
-            cur.execute('''
-                SELECT 
-                    chunk_text,
-                    metadata,
-                    1 - (embedding <=> %s) as similarity
-                FROM chunks
-                ORDER BY embedding <=> %s
-                LIMIT %s
-            ''', (query_embedding, query_embedding, limit))
+        Args:
+            processed_chunks: List of processed chunk data
+        """
+        try:
+            # Prepare the data for insertion
+            data = [
+                (
+                    chunk["document_id"],
+                    chunk["chunk_text"],
+                    chunk["embedding"],
+                    chunk["page_numbers"],
+                    json.dumps(chunk["metadata"])
+                )
+                for chunk in processed_chunks
+            ]
             
-            results = cur.fetchall()
+            # Connect to the database
+            conn = self.db_manager.get_connection()
             
-        return [
-            {
-                'text': row[0],
-                'metadata': row[1],
-                'similarity': row[2]
-            }
-            for row in results
-        ]
+            try:
+                # Use execute_values for efficient bulk insertion
+                with conn.cursor() as cur:
+                    execute_values(
+                        cur,
+                        '''
+                        INSERT INTO chunks 
+                        (document_id, chunk_text, embedding, page_numbers, metadata)
+                        VALUES %s
+                        ''',
+                        data
+                    )
+                # Commit the transaction
+                conn.commit()
+                logger.info(f"Successfully stored {len(processed_chunks)} chunks")
+            except Exception as e:
+                # Rollback the transaction in case of an error
+                conn.rollback()
+                logger.error(f"Error adding chunks to database: {e}", exc_info=True)
+                raise
+            finally:
+                # Return the connection to the pool
+                self.db_manager.return_connection(conn)
+        except Exception as e:
+            logger.error(f"Error in _store_chunks: {e}", exc_info=True)
+            raise
