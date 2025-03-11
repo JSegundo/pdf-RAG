@@ -66,31 +66,76 @@ https://www.npmjs.com/package/pdf-lib
 ## Chat Flow (buildContext expanded):
 
 User sends message via WebSocket
-Chat Manager:
+### Chat Flow (buildContext expanded):
+
+    User sends message via WebSocket
+    Chat Manager:
+
     Retrieves conversation history
     Gets relevant chunks from Vector Search
     Context Builder combines:
-        Most relevant document chunks
-        Recent conversation history
-        System prompts/instructions
 
-Optional: Reranker fine-tunes relevance
-Formats final prompt for LLM
-Streams response back via WebSocket
+    Most relevant document chunks
+    Recent conversation history
+    System prompts/instructions
+
+        Optional: Reranker fine-tunes relevance
+        Formats final prompt for LLM
+        Streams response back via WebSocket
 
 
-Document Processing Flow:
+### Document Processing Flow:
+
     Upload → File Storage
     Queue job for processing
     Python service:
-        Extracts text
-        Splits into optimal chunks
-        Generates embeddings
-        Stores in Vector DB with metadata
+
+    Extracts text
+    Splits into optimal chunks
+    Generates embeddings
+    Stores in Vector DB with metadata
 
 
+### Performance Optimizations:
+
+    Cache frequent vector searches
+    Batch embedding generations
+    Stream responses for better UX
+    Reuse WebSocket connections
 
 
+### Scalability Points:
+
+    Separate queues for different processing types
+    Independent scaling of Node.js and Python services
+    Cache sharing between services
+    Stateless design for horizontal scaling
+
+
+#### This architecture allows for:
+
+Real-time chat with streamed responses
+Asynchronous document processing
+Efficient context retrieval and reranking
+Scalable processing of large documents
+Easy addition of new document types or LLM providers
+
+
+# Communication:
+# Communication:
+Use Message Queue (RabbitMQ/Redis) for:
+    Document processing
+    Embedding generation
+    Any long-running tasks
+
+Use HTTP/REST for:
+    Vector searches
+    Context retrieval
+    Real-time operations
+
+Optional: Use WebSocket between services for:
+    Stream processing updates
+    Real-time notifications
 
 
 
@@ -118,3 +163,27 @@ This architecture allows for:
     Efficient context retrieval and reranking
     Scalable processing of large documents
     Easy addition of new document types or LLM providers
+
+
+
+    CONSIERING THAT DOCLING IS VERY CPU INTENSIVE, IS THERE ANY DEPLOYMENT / SCALABILITY CONFIGURATIONS THAT WE MIGHT WANT TO HAVE?
+
+// problemas:
+// problemas:
+// problemas:
+
+## monitor memory usage 
+### Check overall Docker disk usage
+docker system df
+### More detailed view with actual sizes
+docker system df -v
+### Check disk space on your entire system
+df -h
+
+bugs happen when uploading large documents (200 pages book) docling gets stuck, rabbit closes connection and websockets too.
+    
+processing-service getting stuck 
+    - takes long to loadwhen downloading OCRmodels
+        easyocr.easyocr - WARNING - Downloading detection model, please wait.
+
+// chunks: 0 ?
