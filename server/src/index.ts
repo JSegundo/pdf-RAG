@@ -9,6 +9,7 @@ import cors from 'cors';
 import path from 'path';
 import { setupWebSocketServer } from './services/websocket/server';
 import http from 'http';
+import chatRouter from './api/routes/chat';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -27,6 +28,9 @@ app.use(cors()); // Add CORS middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Routes
+app.use('/api/chat', chatRouter);
+
 // Setup routes
 setupRoutes(app, statusServer);
 
@@ -41,6 +45,7 @@ async function startServer() {
     
     httpServer.listen(config.port, () => {
       console.log(`Server running on port ${config.port}`);
+      console.log(`Chat API available at http://localhost:${config.port}/api/chat`);
       console.log(`WebSocket server available at ws://localhost:${config.port}/status/[fileId]`);
     });
   } catch (error) {
